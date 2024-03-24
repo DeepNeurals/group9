@@ -1,24 +1,3 @@
-/*
- * Copyright (C) 2019 Kirk Scheper <kirkscheper@gmail.com>
- *
- * This file is part of Paparazzi.
- *
- * Paparazzi is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2, or (at your option)
- * any later version.
- *
- * Paparazzi is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with Paparazzi; see the file COPYING.  If not, write to
- * the Free Software Foundation, 59 Temple Place - Suite 330,
- * Boston, MA 02111-1307, USA.
- */
-
 /**
  * @file modules/computer_vision/cv_detect_object.h
  * Assumes the object consists of a continuous color and checks
@@ -36,6 +15,8 @@
 #include <math.h>
 #include "pthread.h"
 
+
+
 #define PRINT(string,...) fprintf(stderr, "[object_detector->%s()] " string,__FUNCTION__ , ##__VA_ARGS__)
 #if OBJECT_DETECTOR_VERBOSE
 #define VERBOSE_PRINT PRINT
@@ -52,7 +33,7 @@ static pthread_mutex_t mutex;
 #define COLOR_OBJECT_DETECTOR_FPS2 0 ///< Default FPS (zero means run at camera fps)
 #endif
 
-// Filter Settings
+// Filter Settings (defined in the bebop_course_orangeavoid.xml )
 uint8_t cod_lum_min1 = 0;
 uint8_t cod_lum_max1 = 0;
 uint8_t cod_cb_min1 = 0;
@@ -91,6 +72,8 @@ uint32_t find_object_centroid(struct image_t *img, int32_t* p_xc, int32_t* p_yc,
  * @param filter - which detection filter to process
  * @return img
  */
+ 
+ 
 static struct image_t *object_detector(struct image_t *img, uint8_t filter)
 {
   uint8_t lum_min, lum_max;
@@ -124,9 +107,10 @@ static struct image_t *object_detector(struct image_t *img, uint8_t filter)
   int32_t x_c, y_c;
 
   // Filter and find centroid
+  uint32_t count = 0;
   uint32_t count = find_object_centroid(img, &x_c, &y_c, draw, lum_min, lum_max, cb_min, cb_max, cr_min, cr_max);
-  VERBOSE_PRINT("Color count %d: %u, threshold %u, x_c %d, y_c %d\n", camera, object_count, count_threshold, x_c, y_c);
-  VERBOSE_PRINT("centroid %d: (%d, %d) r: %4.2f a: %4.2f\n", camera, x_c, y_c,
+  //VERBOSE_PRINT("Color count %d: %u, threshold %u, x_c %d, y_c %d\n", camera, object_count, count_threshold, x_c, y_c);
+  //VERBOSE_PRINT("centroid %d: (%d, %d) r: %4.2f a: %4.2f\n", camera, x_c, y_c,
         hypotf(x_c, y_c) / hypotf(img->w * 0.5, img->h * 0.5), RadOfDeg(atan2f(y_c, x_c)));
 
   pthread_mutex_lock(&mutex);
@@ -151,10 +135,34 @@ struct image_t *object_detector2(struct image_t *img, uint8_t camera_id __attrib
   return object_detector(img, 2);
 }
 
-void color_object_detector_init(void)
+//define some new variables
+#ifndef OPENCVTHEO_FPS
+#define OPENCVTHEO_FPS 0       ///< Default FPS (zero means run at camera fps)
+#endif
+
+// Function that call c++ function in opencv_theo.cpp
+struct image_t *opencv_func(struct image_t *img, uint8_t camera_id);
+struct image_t *opencv_func(struct image_t *img, uint8_t camera_id)
 {
+
+  if (img->type == IMAGE_YUV422) {
+    // Call OpenCV (C++ from paparazzi C function)
+    opencv_theo((char *) img->buf, img->w, img->h);
+  }
+// opencv_example(NULL, 10,10);
+
+  return NULL;
+}
+
+//init function
+void color_object_detector_init(void){
+  
+  //initialise callback of opencv function
+  //cv_add_to_device(&OPENCVTHEO_CAMERA, opencv_func, OPENCVTHEO_FPS, 0); for now dont call the function
+  //as before
   memset(global_filters, 0, 2*sizeof(struct color_object_t));
   pthread_mutex_init(&mutex, NULL);
+
 #ifdef COLOR_OBJECT_DETECTOR_CAMERA1
 #ifdef COLOR_OBJECT_DETECTOR_LUM_MIN1
   cod_lum_min1 = COLOR_OBJECT_DETECTOR_LUM_MIN1;
@@ -240,9 +248,9 @@ uint32_t find_object_centroid(struct image_t *img, int32_t* p_xc, int32_t* p_yc,
         cnt ++;
         tot_x += x;
         tot_y += y;
-        if (draw){
-          *yp = 255;  // make pixel brighter in image
-        }
+        //if (draw){
+          //*yp = 255;  // make pixel brighter in image
+        //}
       }
     }
   }
@@ -258,6 +266,7 @@ uint32_t find_object_centroid(struct image_t *img, int32_t* p_xc, int32_t* p_yc,
 
 void color_object_detector_periodic(void)
 {
+  
   static struct color_object_t local_filters[2];
   pthread_mutex_lock(&mutex);
   memcpy(local_filters, global_filters, 2*sizeof(struct color_object_t));

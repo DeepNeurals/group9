@@ -34,6 +34,7 @@ PRINT_CONFIG_VAR(OPENCVDEMO_FPS)
 
 // Function
 struct image_t *opencv_func(struct image_t *img, uint8_t camera_id);
+
 struct image_t *opencv_func(struct image_t *img, uint8_t camera_id)
 {
 
