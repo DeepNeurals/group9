@@ -107,11 +107,11 @@ static struct image_t *object_detector(struct image_t *img, uint8_t filter)
   int32_t x_c, y_c;
 
   // Filter and find centroid
-  uint32_t count = 0;
+  //uint32_t count = 0;
   uint32_t count = find_object_centroid(img, &x_c, &y_c, draw, lum_min, lum_max, cb_min, cb_max, cr_min, cr_max);
   //VERBOSE_PRINT("Color count %d: %u, threshold %u, x_c %d, y_c %d\n", camera, object_count, count_threshold, x_c, y_c);
   //VERBOSE_PRINT("centroid %d: (%d, %d) r: %4.2f a: %4.2f\n", camera, x_c, y_c,
-        hypotf(x_c, y_c) / hypotf(img->w * 0.5, img->h * 0.5), RadOfDeg(atan2f(y_c, x_c)));
+   //     hypotf(x_c, y_c) / hypotf(img->w * 0.5, img->h * 0.5), RadOfDeg(atan2f(y_c, x_c)));
 
   pthread_mutex_lock(&mutex);
   global_filters[filter-1].color_count = count;
@@ -135,6 +135,8 @@ struct image_t *object_detector2(struct image_t *img, uint8_t camera_id __attrib
   return object_detector(img, 2);
 }
 
+
+
 //define some new variables
 #ifndef OPENCVTHEO_FPS
 #define OPENCVTHEO_FPS 0       ///< Default FPS (zero means run at camera fps)
@@ -157,8 +159,8 @@ struct image_t *opencv_func(struct image_t *img, uint8_t camera_id)
 //init function
 void color_object_detector_init(void){
   
-  //initialise callback of opencv function
-  //cv_add_to_device(&OPENCVTHEO_CAMERA, opencv_func, OPENCVTHEO_FPS, 0); for now dont call the function
+  //initialise callback of opencv function  ///// UNCOMMENT THIS FOR USING OPITICAL FLOW DEFINED IN OPENCV_THEO.CPP /////////
+  //cv_add_to_device(&OPENCVTHEO_CAMERA, opencv_func, OPENCVTHEO_FPS, 0);  
   //as before
   memset(global_filters, 0, 2*sizeof(struct color_object_t));
   pthread_mutex_init(&mutex, NULL);
@@ -219,50 +221,172 @@ uint32_t find_object_centroid(struct image_t *img, int32_t* p_xc, int32_t* p_yc,
                               uint8_t cb_min, uint8_t cb_max,
                               uint8_t cr_min, uint8_t cr_max)
 {
-  uint32_t cnt = 0;
-  uint32_t tot_x = 0;
-  uint32_t tot_y = 0;
+  //uint32_t cnt = 0;
+  //uint32_t tot_x = 0;
+  //uint32_t tot_y = 0;
   uint8_t *buffer = img->buf;
 
-  // Go through all the pixels
+  // Declare cropped_height before using it
+  uint16_t cropped_width = img->w * 0.80;
+
+  // Define the collision area parameters (center coordinates, width, and height)
+  int collision_center_x = img->w / 2;  // Center of the image in the x-axis
+  int collision_center_y = img->h / 2;  // Center of the image in the y-axis
+  int collision_width = img->w * 0.20;         // Width of the collision area
+  int collision_height = img->h * 0.20;       // Height of the collision area
+
+  // Go through all the pixels and crop the right part
   for (uint16_t y = 0; y < img->h; y++) {
-    for (uint16_t x = 0; x < img->w; x ++) {
-      // Check if the color is inside the specified values
-      uint8_t *yp, *up, *vp;
-      if (x % 2 == 0) {
-        // Even x
-        up = &buffer[y * 2 * img->w + 2 * x];      // U
-        yp = &buffer[y * 2 * img->w + 2 * x + 1];  // Y1
-        vp = &buffer[y * 2 * img->w + 2 * x + 2];  // V
-        //yp = &buffer[y * 2 * img->w + 2 * x + 3]; // Y2
-      } else {
-        // Uneven x
-        up = &buffer[y * 2 * img->w + 2 * x - 2];  // U
-        //yp = &buffer[y * 2 * img->w + 2 * x - 1]; // Y1
-        vp = &buffer[y * 2 * img->w + 2 * x];      // V
-        yp = &buffer[y * 2 * img->w + 2 * x + 1];  // Y2
+      for (uint16_t x = 0; x < img->w; x++) {
+          if (x >= cropped_width) {
+              uint8_t *yp = &buffer[y * 2 * img->w + 2 * x + 1];  // Y component of the pixel
+              *yp = 0;  // Set Y component to 0 (black)
+              // Set U and V components to mid-values (128 for neutral color)
+              buffer[y * 2 * img->w + 2 * x] = 128;  // U component
+              buffer[y * 2 * img->w + 2 * x + 2] = 128;  // V component
+          }
       }
-      if ( (*yp >= lum_min) && (*yp <= lum_max) &&
-           (*up >= cb_min ) && (*up <= cb_max ) &&
-           (*vp >= cr_min ) && (*vp <= cr_max )) {
-        cnt ++;
-        tot_x += x;
-        tot_y += y;
-        //if (draw){
-          //*yp = 255;  // make pixel brighter in image
-        //}
+  }
+
+
+  // // Go through all the pixels
+  // for (uint16_t y = 0; y < img->h; y++) {
+  //   for (uint16_t x = 0; x < img->w; x ++) {
+  //     // Check if the color is inside the specified values
+  //     uint8_t *yp, *up, *vp;
+  //     if (x % 2 == 0) {
+  //       // Even x
+  //       up = &buffer[y * 2 * img->w + 2 * x];      // U
+  //       yp = &buffer[y * 2 * img->w + 2 * x + 1];  // Y1
+  //       vp = &buffer[y * 2 * img->w + 2 * x + 2];  // V
+  //       //yp = &buffer[y * 2 * img->w + 2 * x + 3]; // Y2
+  //     } else {
+  //       // Uneven x
+  //       up = &buffer[y * 2 * img->w + 2 * x - 2];  // U
+  //       //yp = &buffer[y * 2 * img->w + 2 * x - 1]; // Y1
+  //       vp = &buffer[y * 2 * img->w + 2 * x];      // V
+  //       yp = &buffer[y * 2 * img->w + 2 * x + 1];  // Y2
+  //     }
+  //     if ( (*yp >= lum_min) && (*yp <= lum_max) &&
+  //          (*up >= cb_min ) && (*up <= cb_max ) &&
+  //          (*vp >= cr_min ) && (*vp <= cr_max )) {
+  //       cnt ++;
+  //       tot_x += x;
+  //       tot_y += y;
+  //       //if (draw){
+  //         //*yp = 255;  // make pixel brighter in image
+  //       //}
+  //     }
+  //   }
+  // }
+  // if (cnt > 0) {
+  //   *p_xc = (int32_t)roundf(tot_x / ((float) cnt) - img->w * 0.5f);
+  //   *p_yc = (int32_t)roundf(img->h * 0.5f - tot_y / ((float) cnt));
+  // } else {
+  //   *p_xc = 0;
+  //   *p_yc = 0;
+  // }
+
+  // Go through all the pixels and filter 
+  for (uint16_t y = 0; y < img->h; y++) {
+      for (uint16_t x = 0; x < img->w; x++) {
+          // Check if the color is inside the specified values
+          uint8_t *yp, *up, *vp;
+          if (x % 2 == 0) {
+              // Even x
+              up = &buffer[y * 2 * img->w + 2 * x];      // U
+              yp = &buffer[y * 2 * img->w + 2 * x + 1];  // Y1
+              vp = &buffer[y * 2 * img->w + 2 * x + 2];  // V
+              //yp = &buffer[y * 2 * img->w + 2 * x + 3]; // Y2
+          } else {
+              // Uneven x
+              up = &buffer[y * 2 * img->w + 2 * x - 2];  // U
+              //yp = &buffer[y * 2 * img->w + 2 * x - 1]; // Y1
+              vp = &buffer[y * 2 * img->w + 2 * x];      // V
+              yp = &buffer[y * 2 * img->w + 2 * x + 1];  // Y2
+          }
+          /*
+          if ((*yp >= lum_min) && (*yp <= lum_max) &&
+              (*up >= cb_min) && (*up <= cb_max) &&
+              (*vp >= cr_min) && (*vp <= cr_max)) {
+              cnt++;
+              tot_x += x;
+              tot_y += y;
+              if (draw) {
+                  *yp = 187;
+                  *up = 135;
+                  *vp = 176;  // make pixel pink in image
+              } 
+          } */
+          // Check if the color is blue or black  
+          if (((38 < *yp && *yp < 70) && (80 < *up && *up < 150) && (80 < *vp && *vp < 150)) ||   // le premier c noir le deuxieme c bleu
+              ((70 < *yp && *yp < 90) && (152 < *up && *up < 163) && (90 < *vp && *vp < 100))) {
+              // Set the entire row to black
+              for (uint16_t x_row = 0; x_row < img->w; x_row++) {
+                  uint8_t *yp_row, *up_row, *vp_row;
+                  if (x_row % 2 == 0) {
+                      // Even x
+                      up_row = &buffer[y * 2 * img->w + 2 * x_row];      // U
+                      yp_row = &buffer[y * 2 * img->w + 2 * x_row + 1];  // Y1
+                      vp_row = &buffer[y * 2 * img->w + 2 * x_row + 2];  // V
+                      //yp_row = &buffer[y * 2 * img->w + 2 * x_row + 3]; // Y2
+                  } else {
+                      // Uneven x
+                      up_row = &buffer[y * 2 * img->w + 2 * x_row - 2];  // U
+                      //yp_row = &buffer[y * 2 * img->w + 2 * x_row - 1]; // Y1
+                      vp_row = &buffer[y * 2 * img->w + 2 * x_row];      // V
+                      yp_row = &buffer[y * 2 * img->w + 2 * x_row + 1];  // Y2
+                  }
+                  *yp_row = 0;
+                  *up_row = 128;
+                  *vp_row = 128;
+              }
+              break;  // Exit the loop since the entire row has been processed
+          }
+      }
+
+  }
+
+  
+  // instead of counting the orange pixels, check if the pixels inside the Collision area are all black 
+  // Define a flag to indicate if all pixels in the collision area are black
+  int all_black_column = 700000; // = 1: for clarity used very big number
+
+  // Calculate the y-coordinate of the row inside the collision area
+  int row_y = collision_center_y;
+
+  // Go through all the pixels in the row inside the collision area
+  for (int x = collision_center_x - collision_width / 2; x < collision_center_x + collision_width / 2; x++) {
+      // Check if the pixel is within the image boundaries
+      if (x >= 0 && x < img->w && row_y >= 0 && row_y < img->h) {
+          // Access the pixel color values
+          uint8_t *yp = &buffer[row_y * img->w + x];  // Y (grayscale value)
+          if (*yp =0){
+            all_black_column = 500;
+            PRINT("black pixel");
+            break;
+          }
+          // Check if the pixel is black (Y value is 0)
+          else if (*yp != 0) {
+              // If any pixel is not black, set the flag to false and break the loop
+              all_black_column = 300;
+              // Print a message indicating that a colored pixel is found inside the column
+              PRINT("found colored pixel in row inside collision area");
+              break;
+          }
+      }
+      else{
+        PRINT("no pixels inside image boundaries");
       }
     }
-  }
-  if (cnt > 0) {
-    *p_xc = (int32_t)roundf(tot_x / ((float) cnt) - img->w * 0.5f);
-    *p_yc = (int32_t)roundf(img->h * 0.5f - tot_y / ((float) cnt));
-  } else {
-    *p_xc = 0;
-    *p_yc = 0;
-  }
-  return cnt;
+
+  return all_black_column;
 }
+
+
+
+
+//periodic function that will send the information to the orange_avoider
 
 void color_object_detector_periodic(void)
 {
@@ -274,7 +398,7 @@ void color_object_detector_periodic(void)
 
   if(local_filters[0].updated){
     AbiSendMsgVISUAL_DETECTION(COLOR_OBJECT_DETECTION1_ID, local_filters[0].x_c, local_filters[0].y_c,
-        0, 0, local_filters[0].color_count, 0);
+        0, 0, local_filters[0].color_count, 0);  //we only need the information about if all pixels inside the Collision Area are black (no obstacle)
     local_filters[0].updated = false;
   }
   if(local_filters[1].updated){

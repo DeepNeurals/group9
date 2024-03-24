@@ -21,9 +21,12 @@
 #include "firmwares/rotorcraft/navigation.h"
 #include "generated/airframe.h"
 #include "state.h"
+
 #include "modules/core/abi.h"
 #include <time.h>
 #include <stdio.h>
+
+#include <unistd.h> // Include the header for sleep()
 
 #define NAV_C // needed to get the nav functions like Inside...
 #include "generated/flight_plan.h"
@@ -37,18 +40,23 @@
 #define VERBOSE_PRINT(...)
 #endif
 
+
+//function declarations
 static uint8_t moveWaypointForward(uint8_t waypoint, float distanceMeters);
 static uint8_t calculateForwards(struct EnuCoor_i *new_coor, float distanceMeters);
 static uint8_t moveWaypoint(uint8_t waypoint, struct EnuCoor_i *new_coor);
 static uint8_t increase_nav_heading(float incrementDegrees);
 static uint8_t chooseRandomIncrementAvoidance(void);
 
+
+//define possible navigation states
 enum navigation_state_t {
   SAFE,
   OBSTACLE_FOUND,
   SEARCH_FOR_SAFE_HEADING,
   OUT_OF_BOUNDS
 };
+
 
 // define settings
 float oa_color_count_frac = 0.18f;
@@ -95,8 +103,9 @@ void orange_avoider_init(void)
 }
 
 /*
- * Function that checks it is safe to move forwards, and then moves a waypoint forward or changes the heading
+ * Periodic function, being the autpilot of the drone
  */
+
 void orange_avoider_periodic(void)
 {
   // only evaluate our state machine if we are flying
@@ -107,27 +116,98 @@ void orange_avoider_periodic(void)
   // compute current color thresholds
   int32_t color_count_threshold = oa_color_count_frac * front_camera.output_size.w * front_camera.output_size.h;
 
-  VERBOSE_PRINT("Color_count: %d  threshold: %d state: %d \n", color_count, color_count_threshold, navigation_state);
+  VERBOSE_PRINT("Color_count: %d  threshold: %d \n", color_count, color_count_threshold);
 
   // update our safe confidence using color threshold
+  int obstacle_in_front_value = 1; //0 is unsafe, 1 is safe
+
+
   if(color_count < color_count_threshold){
     obstacle_free_confidence++;
   } else {
     obstacle_free_confidence -= 2;  // be more cautious with positive obstacle detections
   }
 
-  // bound obstacle_free_confidence
+  //bound obstacle_free_confidence
   Bound(obstacle_free_confidence, 0, max_trajectory_confidence);
 
   float moveDistance = fminf(maxDistance, 0.2f * obstacle_free_confidence);
 
+  // //define that we are in SAFE and that will not change
+  // if (obstacle_in_front_value == 1){
+  //   navigation_state = SAFE;
+  //   //moveWaypointForward(WP_TRAJECTORY, 1.5f);
+    
+  // }
+  
+//   switch (navigation_state){
+//     case SAFE:
+//       PRINT("_____________In SAFE mode ______");
+//       // first define what happens when entering in the state
+//       moveWaypointForward(WP_TRAJECTORY, 1.0f);   //WP trajectory is just to see if we will not result outside the boundaries
+
+//       //then check if the computed waypoints is inside the arena
+//       if (!InsideObstacleZone(WaypointX(WP_TRAJECTORY),WaypointY(WP_TRAJECTORY))){
+//         navigation_state = OUT_OF_BOUNDS;
+
+//       // check if there is an obstacle in FoV
+//       }else if (obstacle_in_front_value == 0){
+//         navigation_state = OBSTACLE_FOUND;
+
+//       // if no of above condintions, just continue to move the drone
+//       }else {
+//         moveWaypointForward(WP_GOAL,1.0f);     
+//          }
+//       break;
+
+//     case OBSTACLE_FOUND:
+//     // stop moving the drone 
+//       PRINT("_____________In OBSTACLE FOUND MODE ______");
+//       waypoint_move_here_2d(WP_GOAL);
+//       waypoint_move_here_2d(WP_TRAJECTORY); //reset the drone to stop in this position
+//       navigation_state = SEARCH_FOR_SAFE_HEADING;
+//       break;
+    
+//     case SEARCH_FOR_SAFE_HEADING:
+//       PRINT("____________SEARCH FOR SAFE HEADING ______");
+//       increase_nav_heading(heading_increment);  // angle is 5 // dont move to fast otherwhise no good pixel filter will be computed
+      
+//       // make sure we have a couple of good readings before declaring the way safe
+//       if (obstacle_free_confidence >= 2){
+//         navigation_state = SAFE;
+//       }
+//       break;
+
+//     case OUT_OF_BOUNDS:
+//       PRINT("____________OUT_OF_BOUNDS______");
+//       float heading_out_of_bounds = 10.f;
+//       increase_nav_heading(heading_out_of_bounds);  //CW or CCW depending on position and pose of the drone in the arena
+//       moveWaypointForward(WP_TRAJECTORY, 1.5f);
+//       //reset safe counter
+//       obstacle_free_confidence = 0;
+
+//       // ensure direction is safe before continuing
+//       navigation_state = SEARCH_FOR_SAFE_HEADING;
+    
+//     default: //for completeness we add a default case
+//       break;
+//   }
+//   return;
+// }
+
+    
+  
+
+
+  
   switch (navigation_state){
     case SAFE:
       // Move waypoint forward
+      PRINT("_____________In SAFE mode ______");
       moveWaypointForward(WP_TRAJECTORY, 1.5f * moveDistance);
       if (!InsideObstacleZone(WaypointX(WP_TRAJECTORY),WaypointY(WP_TRAJECTORY))){
         navigation_state = OUT_OF_BOUNDS;
-      } else if (obstacle_free_confidence == 0){
+      } else if (obstacle_free_confidence < 0){
         navigation_state = OBSTACLE_FOUND;
       } else {
         moveWaypointForward(WP_GOAL, moveDistance);
@@ -135,7 +215,7 @@ void orange_avoider_periodic(void)
 
       break;
     case OBSTACLE_FOUND:
-      // stop
+      PRINT("_____________In OBSTACLE FOUND MODE ______");
       waypoint_move_here_2d(WP_GOAL);
       waypoint_move_here_2d(WP_TRAJECTORY);
 
@@ -145,7 +225,9 @@ void orange_avoider_periodic(void)
       navigation_state = SEARCH_FOR_SAFE_HEADING;
 
       break;
+
     case SEARCH_FOR_SAFE_HEADING:
+      PRINT("____________SEARCH FOR SAFE HEADING ______");
       increase_nav_heading(heading_increment);
 
       // make sure we have a couple of good readings before declaring the way safe
@@ -153,7 +235,9 @@ void orange_avoider_periodic(void)
         navigation_state = SAFE;
       }
       break;
+
     case OUT_OF_BOUNDS:
+      PRINT("____________OUT_OF_BOUNDS______");
       increase_nav_heading(heading_increment);
       moveWaypointForward(WP_TRAJECTORY, 1.5f);
 
@@ -174,6 +258,9 @@ void orange_avoider_periodic(void)
   return;
 }
 
+
+
+// definitions of the functions
 /*
  * Increases the NAV heading. Assumes heading is an INT32_ANGLE. It is bound in this function.
  */
@@ -234,7 +321,7 @@ uint8_t moveWaypoint(uint8_t waypoint, struct EnuCoor_i *new_coor)
  */
 uint8_t chooseRandomIncrementAvoidance(void)
 {
-  // Randomly choose CW or CCW avoiding direction
+  // Randomly choose CW or CCW avoiding direction  this will be based on the telemetry
   if (rand() % 2 == 0) {
     heading_increment = 5.f;
     VERBOSE_PRINT("Set avoidance increment to: %f\n", heading_increment);
