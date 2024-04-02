@@ -31,8 +31,38 @@
 using namespace std;
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/video/video.hpp>
 using namespace cv;
 #include "opencv_image_functions.h"
+
+/*
+#if USE_NPS
+#define CV_YUV2GRAY_Y422 COLOR_BGR2GRAY
+#endif
+*/
+
+Mat computeDepth(const cv::Mat& opticalFlow);
+
+
+//function for depth
+Mat computeDepth(const cv::Mat& opticalFlow) {
+    // Compute magnitude of optical flow vectors
+    Mat flowMagnitude;
+    Mat flowComponents[2];
+    split(opticalFlow, flowComponents);
+    magnitude(flowComponents[0], flowComponents[1], flowMagnitude);
+
+    // Scale magnitude to range [0, 255]
+    Mat magnitudeScaled;
+    normalize(flowMagnitude, magnitudeScaled, 0, 255, cv::NORM_MINMAX);
+
+    // Invert magnitude to represent depth (farther objects have smaller magnitudes)
+    Mat depth = 255 - magnitudeScaled;
+    
+    CV_Assert(depth.channels() == 1 && depth.type() == CV_8UC1);
+    
+    return depth;
+}
 
 
 int opencv_example(char *img, int width, int height)
@@ -40,24 +70,24 @@ int opencv_example(char *img, int width, int height)
   // Create a new image, using the original bebop image.
   Mat M(height, width, CV_8UC2, img);
   Mat image;
+  static Mat lastimage;
 
-#if OPENCVDEMO_GRAYSCALE
   //  Grayscale image example
   cvtColor(M, image, CV_YUV2GRAY_Y422);
   // Canny edges, only works with grayscale image
-  int edgeThresh = 35;
-  Canny(image, image, edgeThresh, edgeThresh * 3);
+  //int edgeThresh = 35;
+
+  Mat opticalFlow;
+  calcOpticalFlowFarneback(image, lastimage, opticalFlow, 0.6, 4, 10, 5, 7, 1.2, 0);
+  
+  //estimate depth based on optical flow
+  Mat depthRatio = computeDepth(opticalFlow);
+  
+  //Canny(image, image, edgeThresh, edgeThresh * 3);
   // Convert back to YUV422, and put it in place of the original image
-  grayscale_opencv_to_yuv422(image, img, width, height);
-#else // OPENCVDEMO_GRAYSCALE
-  // Color image example
-  // Convert the image to an OpenCV Mat
-  cvtColor(M, image, CV_YUV2BGR_Y422);
-  // Blur it, because we can
-  blur(image, image, Size(5, 5));
-  // Convert back to YUV422 and put it in place of the original image
-  colorbgr_opencv_to_yuv422(image, img, width, height);
-#endif // OPENCVDEMO_GRAYSCALE
+  grayscale_opencv_to_yuv422(depthRatio, img, width, height);
+  
+  lastimage = image.clone();
 
   return 0;
 }

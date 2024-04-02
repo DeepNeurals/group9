@@ -21,7 +21,7 @@
     </target>
     <target name="nps" board="pc">
       <module name="fdm" type="gazebo"/>
-      <define name="VIDEO_CAPTURE_PATH" value="/tmp/paparazzi/images"/>
+      <define name="VIDEO_CAPTURE_PATH" value="/home/tdebacker/test"/>
       <define name="LOGGER_FILE_PATH" value="/tmp/paparazzi/log"/>
       
       <!-- Detect orange -->
@@ -61,13 +61,28 @@
       <define name="VIDEO_CAPTURE_CAMERA" value="front_camera"/>
       <define name="VIDEO_CAPTURE_FPS" value="10"/>
     </module>
+<<<<<<< HEAD
 
+=======
+    <module name="cv_detect_color_object">
+      <define name="COLOR_OBJECT_DETECTOR_CAMERA1" value="front_camera"/>
+      <define name="COLOR_OBJECT_DETECTOR_FPS1" value="0"/>
+      <define name="COLOR_OBJECT_DETECTOR_DRAW1" value="1"/>
+      <define name="OPENCVTHEO_FPS" value="0"/>
+      <define name="OPENCVTHEO_CAMERA" value="front_camera"/>
+    </module>
+    <module name="orange_avoider">
+      <define name="ORANGE_AVOIDER_VISUAL_DETECTION_ID" value="COLOR_OBJECT_DETECTION1_ID"/>
+    </module>
+>>>>>>> group9/mavlabCourse2024
     <module name="video_rtp_stream">
       <define name="VIEWVIDEO_CAMERA" value="front_camera"/>
       <define name="VIEWVIDEO_CAMERA2" value="bottom_camera"/>
       <define name="VIEWVIDEO_DOWNSIZE_FACTOR" value="1"/>
       <define name="VIEWVIDEO_QUALITY_FACTOR" value="40"/>
     </module>
+
+  
   </firmware>
 
   <commands>
@@ -100,8 +115,8 @@
   </command_laws>
 
   <section name="BEBOP_FRONT_CAMERA" prefix="MT9F002_">
-    <define name="OUTPUT_HEIGHT" value="520" />
-    <define name="OUTPUT_WIDTH" value="240" />
+    <define name="OUTPUT_HEIGHT" value="300" />
+    <define name="OUTPUT_WIDTH" value="138" />
     <define name="OFFSET_X" value="0.09" />
     <define name="OFFSET_Y" value="0.00" />
     <define name="ZOOM" value="1.25"/>

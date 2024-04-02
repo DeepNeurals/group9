@@ -23,15 +23,23 @@
 #include "generated/airframe.h"
 #include "state.h"
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> group9/mavlabCourse2024
 #include "modules/core/abi.h"
 #include <time.h>
 #include <stdio.h>
 
+<<<<<<< HEAD
 
 #include <unistd.h> // Include the header for sleep()
 
 
+=======
+#include <unistd.h> // Include the header for sleep()
+
+>>>>>>> group9/mavlabCourse2024
 #define NAV_C // needed to get the nav functions like Inside...
 #include "generated/flight_plan.h"
 
@@ -47,8 +55,11 @@
 #endif
 
 
+<<<<<<< HEAD
 
 
+=======
+>>>>>>> group9/mavlabCourse2024
 //function declarations
 static uint8_t moveWaypointForward(uint8_t waypoint, float distanceMeters);
 static uint8_t calculateForwards(struct EnuCoor_i *new_coor, float distanceMeters);
@@ -57,8 +68,11 @@ static uint8_t increase_nav_heading(float incrementDegrees);
 static uint8_t chooseRandomIncrementAvoidance(void);
 
 
+<<<<<<< HEAD
 
 
+=======
+>>>>>>> group9/mavlabCourse2024
 //define possible navigation states
 enum navigation_state_t {
   SAFE,
@@ -68,8 +82,11 @@ enum navigation_state_t {
 };
 
 
+<<<<<<< HEAD
 
 
+=======
+>>>>>>> group9/mavlabCourse2024
 // define settings
 float oa_color_count_frac = 0.18f;
 
@@ -124,7 +141,10 @@ void orange_avoider_init(void)
  * Periodic function, being the autpilot of the drone
  */
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> group9/mavlabCourse2024
 void orange_avoider_periodic(void)
 {
   // only evaluate our state machine if we are flying
@@ -136,6 +156,7 @@ void orange_avoider_periodic(void)
   // compute current color thresholds
   int32_t color_count_threshold = oa_color_count_frac * front_camera.output_size.w * front_camera.output_size.h;
 
+<<<<<<< HEAD
 
 
 
@@ -151,15 +172,30 @@ void orange_avoider_periodic(void)
  
   if(thresh <= color_count && color_count <= (thresh*2)){
 	obstacle_free_confidence++;
+=======
+  VERBOSE_PRINT("Color_count: %d  threshold: %d \n", color_count, color_count_threshold);
+
+  // update our safe confidence using color threshold
+  int obstacle_in_front_value = 1; //0 is unsafe, 1 is safe
+
+
+  if(color_count < color_count_threshold){
+    obstacle_free_confidence++;
+>>>>>>> group9/mavlabCourse2024
   } else {
 	obstacle_free_confidence -= 2;  // be more cautious with positive obstacle detections
   }
+<<<<<<< HEAD
  
+=======
+
+>>>>>>> group9/mavlabCourse2024
   //bound obstacle_free_confidence
   Bound(obstacle_free_confidence, 0, max_trajectory_confidence);
   VERBOSE_PRINT("Color_count1: %d  confidence1: %d threshold1: %d \n", color_count, obstacle_free_confidence, thresh);
   float moveDistance = fminf(maxDistance, 0.2f * obstacle_free_confidence);
 
+<<<<<<< HEAD
 
  
     
@@ -235,15 +271,141 @@ void orange_avoider_periodic(void)
   	break;
 	default:
   	break;
+=======
+  // //define that we are in SAFE and that will not change
+  // if (obstacle_in_front_value == 1){
+  //   navigation_state = SAFE;
+  //   //moveWaypointForward(WP_TRAJECTORY, 1.5f);
+    
+  // }
+  
+//   switch (navigation_state){
+//     case SAFE:
+//       PRINT("_____________In SAFE mode ______");
+//       // first define what happens when entering in the state
+//       moveWaypointForward(WP_TRAJECTORY, 1.0f);   //WP trajectory is just to see if we will not result outside the boundaries
+
+//       //then check if the computed waypoints is inside the arena
+//       if (!InsideObstacleZone(WaypointX(WP_TRAJECTORY),WaypointY(WP_TRAJECTORY))){
+//         navigation_state = OUT_OF_BOUNDS;
+
+//       // check if there is an obstacle in FoV
+//       }else if (obstacle_in_front_value == 0){
+//         navigation_state = OBSTACLE_FOUND;
+
+//       // if no of above condintions, just continue to move the drone
+//       }else {
+//         moveWaypointForward(WP_GOAL,1.0f);     
+//          }
+//       break;
+
+//     case OBSTACLE_FOUND:
+//     // stop moving the drone 
+//       PRINT("_____________In OBSTACLE FOUND MODE ______");
+//       waypoint_move_here_2d(WP_GOAL);
+//       waypoint_move_here_2d(WP_TRAJECTORY); //reset the drone to stop in this position
+//       navigation_state = SEARCH_FOR_SAFE_HEADING;
+//       break;
+    
+//     case SEARCH_FOR_SAFE_HEADING:
+//       PRINT("____________SEARCH FOR SAFE HEADING ______");
+//       increase_nav_heading(heading_increment);  // angle is 5 // dont move to fast otherwhise no good pixel filter will be computed
+      
+//       // make sure we have a couple of good readings before declaring the way safe
+//       if (obstacle_free_confidence >= 2){
+//         navigation_state = SAFE;
+//       }
+//       break;
+
+//     case OUT_OF_BOUNDS:
+//       PRINT("____________OUT_OF_BOUNDS______");
+//       float heading_out_of_bounds = 10.f;
+//       increase_nav_heading(heading_out_of_bounds);  //CW or CCW depending on position and pose of the drone in the arena
+//       moveWaypointForward(WP_TRAJECTORY, 1.5f);
+//       //reset safe counter
+//       obstacle_free_confidence = 0;
+
+//       // ensure direction is safe before continuing
+//       navigation_state = SEARCH_FOR_SAFE_HEADING;
+    
+//     default: //for completeness we add a default case
+//       break;
+//   }
+//   return;
+// }
+
+    
+  
+
+
+  
+  switch (navigation_state){
+    case SAFE:
+      // Move waypoint forward
+      PRINT("_____________In SAFE mode ______");
+      moveWaypointForward(WP_TRAJECTORY, 1.5f * moveDistance);
+      if (!InsideObstacleZone(WaypointX(WP_TRAJECTORY),WaypointY(WP_TRAJECTORY))){
+        navigation_state = OUT_OF_BOUNDS;
+      } else if (obstacle_free_confidence < 0){
+        navigation_state = OBSTACLE_FOUND;
+      } else {
+        moveWaypointForward(WP_GOAL, moveDistance);
+      }
+
+      break;
+    case OBSTACLE_FOUND:
+      PRINT("_____________In OBSTACLE FOUND MODE ______");
+      waypoint_move_here_2d(WP_GOAL);
+      waypoint_move_here_2d(WP_TRAJECTORY);
+
+      // randomly select new search direction
+      chooseRandomIncrementAvoidance();
+
+      navigation_state = SEARCH_FOR_SAFE_HEADING;
+
+      break;
+
+    case SEARCH_FOR_SAFE_HEADING:
+      PRINT("____________SEARCH FOR SAFE HEADING ______");
+      increase_nav_heading(heading_increment);
+
+      // make sure we have a couple of good readings before declaring the way safe
+      if (obstacle_free_confidence >= 2){
+        navigation_state = SAFE;
+      }
+      break;
+
+    case OUT_OF_BOUNDS:
+      PRINT("____________OUT_OF_BOUNDS______");
+      increase_nav_heading(heading_increment);
+      moveWaypointForward(WP_TRAJECTORY, 1.5f);
+
+      if (InsideObstacleZone(WaypointX(WP_TRAJECTORY),WaypointY(WP_TRAJECTORY))){
+        // add offset to head back into arena
+        increase_nav_heading(heading_increment);
+
+        // reset safe counter
+        obstacle_free_confidence = 0;
+
+        // ensure direction is safe before continuing
+        navigation_state = SEARCH_FOR_SAFE_HEADING;
+      }
+      break;
+    default:
+      break;
+>>>>>>> group9/mavlabCourse2024
   }
   return;
 }
 
 
 
+<<<<<<< HEAD
 
 
 
+=======
+>>>>>>> group9/mavlabCourse2024
 // definitions of the functions
 /*
  * Increases the NAV heading. Assumes heading is an INT32_ANGLE. It is bound in this function.
