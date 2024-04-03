@@ -1,5 +1,22 @@
 # MAIN README
 
+Autonomous Flight Project: Guide through our Repository
+
+The only two important things to know are:
+
+- the computer vision algorithms and the flying policy that were implemented can be observed in the cv_detect_color_object.c file and in the orange_avoider.c file;
+  
+- All the files containing the tests that were carried out are within the python_scripts folder
+
+
+
+
+
+
+
+
+
+
 Paparazzi UAS
 =============
 [![Build Status](https://paparazziuav.semaphoreci.com/badges/paparazzi/branches/master.svg?style=shields&key=d3a59143-a357-434e-89b8-057f15ed8dd2)](https://paparazziuav.semaphoreci.com/projects/paparazzi) [![Gitter chat](https://badges.gitter.im/paparazzi/discuss.svg)](https://gitter.im/paparazzi/discuss)
