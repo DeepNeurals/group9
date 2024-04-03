@@ -1,0 +1,136 @@
+// How to Install OpenCV
+
+1) Make sure to install Ubuntu 20.4 (recommended version in the crash course)
+
+This solution was only tested for this version of Ubuntu on classic HP TU Delft computer. 
+
+
+2)Navigate to paparazzi/sw/ext/opencv bebop:
+cd ~/paparazzi/sw/ext/opencv_bebop
+
+3) Install the required OpenCV Libraries:
+sudo apt install libjpeg-turbo8-dev libpng-dev libtiff-dev zlib1g-dev libdc1394-22-dev
+
+4)Do not forget to do make (inside the current directory): 
+make
+
+5) Then go to the build files for the drone : (will configure the files for OpenCV on the drone)
+command: cd /home/username/paparazzi/sw/ext/opencv_bebop/install_arm 
+command: make install
+
+6) Then go to the build files for the computer: (will configure the files for OpenCV on your on computer)
+command: cd  /home/username/paparazzi/sw/ext/opencv_bebop/install_arm 
+command: make install
+
+
+
+7) finally configure the makefile (XML file) of your module for your drone (AP) and for your computer (NPS) by adding the correct compiler flags.
+
+Printout the last part of the "cv_detect_color_object.xml". 
+
+'Example for AP')
+
+  <makefile target="ap">
+    <file name="cv_detect_color_object.c"/>
+    <file name="opencv_theo.cpp"/>
+    
+    <flag name="CXXFLAGS" value="I$(PAPARAZZI_SRC)/sw/ext/opencv_bebop/install_arm/include"/>
+    
+    <flag name="LDFLAGS" value="L$(PAPARAZZI_HOME)/sw/ext/opencv_bebop/install_arm/lib"/>
+    <flag name="LDFLAGS" value="lopencv_world"/>
+    <flag name="LDFLAGS" value="L$(PAPARAZZI_HOME)/sw/ext/opencv_bebop/install_arm/share/OpenCV/3rdparty/lib"/>
+    <flag name="LDFLAGS" value="llibprotobuf"/>
+    <flag name="LDFLAGS" value="llibjpeg-turbo"/>
+    <flag name="LDFLAGS" value="llibpng"/>
+    <flag name="LDFLAGS" value="llibtiff"/>
+    <flag name="LDFLAGS" value="lzlib"/>
+    <flag name="LDFLAGS" value="lquirc"/>
+    <flag name="LDFLAGS" value="ltegra_hal"/>
+    <flag name="LDFLAGS" value="ldl"/>
+    <flag name="LDFLAGS" value="lm"/>
+    <flag name="LDFLAGS" value="lpthread"/>
+    <flag name="LDFLAGS" value="lrt"/>
+
+  </makefile>
+  
+  
+'Example for NPS')
+ 
+  <makefile target="nps">
+    <file name="cv_detect_color_object.c"/>
+    <file name="opencv_theo.cpp"/>
+    
+    <flag name="CXXFLAGS" value="I$(PAPARAZZI_SRC)/sw/ext/opencv_bebop/install_pc/include"/>
+    
+    <flag name="LDFLAGS" value="L$(PAPARAZZI_HOME)/sw/ext/opencv_bebop/install_pc/lib"/>
+    <flag name="LDFLAGS" value="lopencv_world"/>
+    <flag name="LDFLAGS" value="L$(PAPARAZZI_HOME)/sw/ext/opencv_bebop/install_pc/share/OpenCV/3rdparty/lib"/>
+    <flag name="LDFLAGS" value="llibprotobuf"/>
+    <flag name="LDFLAGS" value="lquirc"/>
+    <flag name="LDFLAGS" value="L/usr/lib/x86_64-linux-gnu"/>
+    <flag name="LDFLAGS" value="ljpeg"/>
+    <flag name="LDFLAGS" value="lpng"/>
+    <flag name="LDFLAGS" value="ltiff"/>
+    <flag name="LDFLAGS" value="L/usr/lib/x86_64-linux-gnu/hdf5/serial"/>
+    <flag name="LDFLAGS" value="lhdf5"/>
+    <flag name="LDFLAGS" value="lpthread"/>
+    <flag name="LDFLAGS" value="lsz"/>
+    <flag name="LDFLAGS" value="lz"/>
+    <flag name="LDFLAGS" value="ldl"/>
+    <flag name="LDFLAGS" value="lm"/>
+    <flag name="LDFLAGS" value="lfreetype"/>
+    <flag name="LDFLAGS" value="lharfbuzz"/>
+    <flag name="LDFLAGS" value="lrt"/>
+
+  </makefile>
+</module>
+
+
+8) USEFUL BACKGROUND INFORMATION
+Good to have in mind, OpenCv only works on C++ code, therefore to use functions that use OpenCV you need to use a special trick to launch a C++ file in C. 
+
+This is what is declared in the "opencv_theo.h" file the header file (see below) of the "opencv_theo.cpp" file in which the code using OpenCv is defined. 
+
+/*
+Test trick c++ to c 
+ */
+
+#ifndef OPENCV_THEO_H
+#define OPENCV_THEO_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+int opencv_theo(char *img, int width, int height);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif
+
+Finally, the opencv function is called from the "cv_detect_color_object.c" file, 
+
+// Function that call c++ function in opencv_theo.cpp
+struct image_t *opencv_func(struct image_t *img, uint8_t camera_id);
+struct image_t *opencv_func(struct image_t *img, uint8_t camera_id)
+{
+
+  if (img->type == IMAGE_YUV422) {
+    // Call OpenCV (C++ from paparazzi C function)
+    opencv_theo((char *) img->buf, img->w, img->h);
+  }
+// opencv_example(NULL, 10,10);
+
+  return NULL;
+}
+
+//init function
+void color_object_detector_init(void){
+  
+  //initialise callback of opencv function
+  cv_add_to_device(&OPENCVTHEO_CAMERA, opencv_func, OPENCVTHEO_FPS, 0);  //OPENCVTHEO_CAMERA and OPENCVTHEO_FPS must both be defined in the xml file of the module and the airframe.
+}
+  
+
