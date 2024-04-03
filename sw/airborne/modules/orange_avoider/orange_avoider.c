@@ -1,22 +1,3 @@
-/*
- * Copyright (C) Roland Meertens
- *
- * This file is part of paparazzi
- *
- */
-/**
- * @file "modules/orange_avoider/orange_avoider.c"
- * @author Roland Meertens
- * Example on how to use the colours detected to avoid orange pole in the cyberzoo
- * This module is an example module for the course AE4317 Autonomous Flight of Micro Air Vehicles at the TU Delft.
- * This module is used in combination with a color filter (cv_detect_color_object) and the navigation mode of the autopilot.
- * The avoidance strategy is to simply count the total number of orange pixels. When above a certain percentage threshold,
- * (given by color_count_frac) we assume that there is an obstacle and we turn.
- *
- * The color filter settings are set using the cv_detect_color_object. This module can run multiple filters simultaneously
- * so you have to define which filter to use with the ORANGE_AVOIDER_VISUAL_DETECTION_ID setting.
- */
-
 #include "modules/orange_avoider/orange_avoider.h"
 #include "firmwares/rotorcraft/navigation.h"
 #include "generated/airframe.h"
@@ -58,15 +39,12 @@ enum navigation_state_t {
 };
 
 
-// define settings
-float oa_color_count_frac = 0.18f;
-
 // define and initialise global variables
 enum navigation_state_t navigation_state = SEARCH_FOR_SAFE_HEADING;
-int32_t color_count = 0;                // orange color count from color filter for obstacle detection
+int32_t color_count = 0;            	// Row on the image corresponding to the optimal heading angle
 int16_t obstacle_free_confidence = 0;   // a measure of how certain we are that the way ahead is safe.
-float heading_increment = 5.f;          // heading angle increment [deg]
-float maxDistance = 2.25;               // max waypoint displacement [m]
+float heading_increment = 5.f;      	// heading angle increment [deg]
+float maxDistance = 2.25;           	// max waypoint displacement [m]
 
 const int16_t max_trajectory_confidence = 5; // number of consecutive negative object detections to be sure we are obstacle free
 
@@ -82,9 +60,9 @@ const int16_t max_trajectory_confidence = 5; // number of consecutive negative o
 #endif
 static abi_event color_detection_ev;
 static void color_detection_cb(uint8_t __attribute__((unused)) sender_id,
-                               int16_t __attribute__((unused)) pixel_x, int16_t __attribute__((unused)) pixel_y,
-                               int16_t __attribute__((unused)) pixel_width, int16_t __attribute__((unused)) pixel_height,
-                               int32_t quality, int16_t __attribute__((unused)) extra)
+                           	int16_t __attribute__((unused)) pixel_x, int16_t __attribute__((unused)) pixel_y,
+                           	int16_t __attribute__((unused)) pixel_width, int16_t __attribute__((unused)) pixel_height,
+                           	int32_t quality, int16_t __attribute__((unused)) extra)
 {
   color_count = quality;
 }
@@ -110,26 +88,22 @@ void orange_avoider_periodic(void)
 {
   // only evaluate our state machine if we are flying
   if(!autopilot_in_flight()){
-    return;
+	return;
   }
 
-  // compute current color thresholds
-  int32_t color_count_threshold = oa_color_count_frac * front_camera.output_size.w * front_camera.output_size.h;
 
-
-
-  // update our safe confidence using color threshold
-  //int obstacle_in_front_value = 1; //0 is unsafe, 1 is safe
-
+  // The threshold helps to determine in what third of the image is the optimal direction located
   uint16_t thresh = front_camera.output_size.h/3;
 
-  
+ 
+  // If the optimal direction is more or less in the middle then increase the confidence to go forward
   if(thresh <= color_count && color_count <= (thresh*2)){
-    obstacle_free_confidence++;
+	obstacle_free_confidence++;
   } else {
-    obstacle_free_confidence -= 2;  // be more cautious with positive obstacle detections
+  // Otherwise, reduce the confidence to go forward
+	obstacle_free_confidence -= 2;  
   }
-  
+ 
   //bound obstacle_free_confidence
   Bound(obstacle_free_confidence, 0, max_trajectory_confidence);
   VERBOSE_PRINT("Color_count1: %d  confidence1: %d threshold1: %d \n", color_count, obstacle_free_confidence, thresh);
@@ -137,72 +111,69 @@ void orange_avoider_periodic(void)
   float moveDistance = fminf(maxDistance, 0.2f * obstacle_free_confidence);
 
  
-  
+ 
   switch (navigation_state){
-    case SAFE:
-      // Move waypoint forward
-      PRINT("_____________In SAFE mode ______");
+	case SAFE:
+  	// Move waypoint forward
+  	PRINT("_____________In SAFE mode ______");
 
-      moveWaypointForward(WP_TRAJECTORY, 1.5f * moveDistance);
-      if (!InsideObstacleZone(WaypointX(WP_TRAJECTORY),WaypointY(WP_TRAJECTORY))){
-        navigation_state = OUT_OF_BOUNDS;
-      } else if (obstacle_free_confidence == 0){
-        navigation_state = OBSTACLE_FOUND;
-      } else {
-        moveWaypointForward(WP_GOAL, moveDistance);
-      }
+  	moveWaypointForward(WP_TRAJECTORY, 1.5f * moveDistance);
+  	if (!InsideObstacleZone(WaypointX(WP_TRAJECTORY),WaypointY(WP_TRAJECTORY))){
+    	navigation_state = OUT_OF_BOUNDS;
+  	} else if (obstacle_free_confidence == 0){
+    	navigation_state = OBSTACLE_FOUND;
+  	} else {
+    	moveWaypointForward(WP_GOAL, moveDistance);
+  	}
 
-      break;
-    case OBSTACLE_FOUND:
-      PRINT("_____________In OBSTACLE FOUND MODE ______");
-      waypoint_move_here_2d(WP_GOAL);
-      waypoint_move_here_2d(WP_TRAJECTORY);
+  	break;
+	case OBSTACLE_FOUND:
+  	PRINT("_____________In OBSTACLE FOUND MODE ______");
+  	waypoint_move_here_2d(WP_GOAL);
+  	waypoint_move_here_2d(WP_TRAJECTORY);
 
-      // randomly select new search direction
-      chooseRandomIncrementAvoidance();
+  	// the increment is actually fixed to always turn slightly to the left
+  	chooseRandomIncrementAvoidance();
 
-      navigation_state = SEARCH_FOR_SAFE_HEADING;
+  	navigation_state = SEARCH_FOR_SAFE_HEADING;
 
-      break;
+  	break;
 
-    case SEARCH_FOR_SAFE_HEADING:
-      PRINT("____________SEARCH FOR SAFE HEADING ______");
-      increase_nav_heading(heading_increment);
+	case SEARCH_FOR_SAFE_HEADING:
+  	PRINT("____________SEARCH FOR SAFE HEADING ______");
+  	increase_nav_heading(heading_increment);
 
-      // make sure we have a couple of good readings before declaring the way safe
-      if (obstacle_free_confidence >= 2){
-        navigation_state = SAFE;
-      }
-      break;
+  	// Only go forward when the confidence is high enough
+  	if (obstacle_free_confidence >= 2){
+    	navigation_state = SAFE;
+  	}
+  	break;
 
-    case OUT_OF_BOUNDS:
-      PRINT("____________OUT_OF_BOUNDS______");
-      increase_nav_heading(heading_increment);
-      moveWaypointForward(WP_TRAJECTORY, 1.5f);
+	case OUT_OF_BOUNDS:
+  	PRINT("____________OUT_OF_BOUNDS______");
+  	increase_nav_heading(heading_increment);
+  	moveWaypointForward(WP_TRAJECTORY, 1.5f);
 
-      if (InsideObstacleZone(WaypointX(WP_TRAJECTORY),WaypointY(WP_TRAJECTORY))){
-        // add offset to head back into arena
-        increase_nav_heading(heading_increment);
+  	if (InsideObstacleZone(WaypointX(WP_TRAJECTORY),WaypointY(WP_TRAJECTORY))){
+    	// add offset to head back into arena
+    	increase_nav_heading(heading_increment);
 
-        // reset safe counter
-        obstacle_free_confidence = 1;
+    	// reset safe counter
+    	obstacle_free_confidence = 1;
 
-        // ensure direction is safe before continuing
-        navigation_state = SEARCH_FOR_SAFE_HEADING;
-      }
-      break;
-    default:
-      break;
+    	// ensure direction is safe before continuing
+    	navigation_state = SEARCH_FOR_SAFE_HEADING;
+  	}
+  	break;
+	default:
+  	break;
   }
   return;
 }
 
 
 
-// definitions of the functions
-/*
- * Increases the NAV heading. Assumes heading is an INT32_ANGLE. It is bound in this function.
- */
+
 uint8_t increase_nav_heading(float incrementDegrees)
 {
   float new_heading = stateGetNedToBodyEulers_f()->psi + RadOfDeg(incrementDegrees);
@@ -238,9 +209,9 @@ uint8_t calculateForwards(struct EnuCoor_i *new_coor, float distanceMeters)
   // Now determine where to place the waypoint you want to go to
   new_coor->x = stateGetPositionEnu_i()->x + POS_BFP_OF_REAL(sinf(heading) * (distanceMeters));
   new_coor->y = stateGetPositionEnu_i()->y + POS_BFP_OF_REAL(cosf(heading) * (distanceMeters));
-  //VERBOSE_PRINT("Calculated %f m forward position. x: %f  y: %f based on pos(%f, %f) and heading(%f)\n", distanceMeters,	
-  //              POS_FLOAT_OF_BFP(new_coor->x), POS_FLOAT_OF_BFP(new_coor->y),
-  //            stateGetPositionEnu_f()->x, stateGetPositionEnu_f()->y, DegOfRad(heading));
+  //VERBOSE_PRINT("Calculated %f m forward position. x: %f  y: %f based on pos(%f, %f) and heading(%f)\n", distanceMeters,    
+  //          	POS_FLOAT_OF_BFP(new_coor->x), POS_FLOAT_OF_BFP(new_coor->y),
+  //        	stateGetPositionEnu_f()->x, stateGetPositionEnu_f()->y, DegOfRad(heading));
   return false;
 }
 
@@ -250,7 +221,7 @@ uint8_t calculateForwards(struct EnuCoor_i *new_coor, float distanceMeters)
 uint8_t moveWaypoint(uint8_t waypoint, struct EnuCoor_i *new_coor)
 {
   //VERBOSE_PRINT("Moving waypoint %d to x:%f y:%f\n", waypoint, POS_FLOAT_OF_BFP(new_coor->x),
-  //             POS_FLOAT_OF_BFP(new_coor->y));
+  //         	POS_FLOAT_OF_BFP(new_coor->y));
   waypoint_move_xy_i(waypoint, new_coor->x, new_coor->y);
   return false;
 }
@@ -261,7 +232,7 @@ uint8_t moveWaypoint(uint8_t waypoint, struct EnuCoor_i *new_coor)
 uint8_t chooseRandomIncrementAvoidance(void)
 {
   heading_increment = -5.f;
-  
+ 
   return false;
 }
 

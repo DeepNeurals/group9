@@ -60,22 +60,11 @@ struct color_object_t {
 };
 struct color_object_t global_filters[2];
 
-// Function
-// uint32_t find_object_centroid(struct image_t *img, int32_t* p_xc, int32_t* p_yc, bool draw,
-//                               uint8_t lum_min, uint8_t lum_max,
-//                               uint8_t cb_min, uint8_t cb_max,
-//                               uint8_t cr_min, uint8_t cr_max);
 
-uint32_t find_object_centroid(struct image_t *img);                      
+uint32_t find_object_centroid(struct image_t *img);                 	 
 
-/*
- * object_detector
- * @param img - input image to process
- * @param filter - which detection filter to process
- * @return img
- */
  
- 
+
 static struct image_t *object_detector(struct image_t *img, uint8_t filter)
 {
   uint8_t lum_min, lum_max;
@@ -84,32 +73,36 @@ static struct image_t *object_detector(struct image_t *img, uint8_t filter)
   bool draw;
 
   switch (filter){
-    case 1:
-      lum_min = cod_lum_min1;
-      lum_max = cod_lum_max1;
-      cb_min = cod_cb_min1;
-      cb_max = cod_cb_max1;
-      cr_min = cod_cr_min1;
-      cr_max = cod_cr_max1;
-      draw = cod_draw1;
-      break;
-    case 2:
-      lum_min = cod_lum_min2;
-      lum_max = cod_lum_max2;
-      cb_min = cod_cb_min2;
-      cb_max = cod_cb_max2;
-      cr_min = cod_cr_min2;
-      cr_max = cod_cr_max2;
-      draw = cod_draw2;
-      break;
-    default:
-      return img;
+	case 1:
+  	lum_min = cod_lum_min1;
+  	lum_max = cod_lum_max1;
+  	cb_min = cod_cb_min1;
+  	cb_max = cod_cb_max1;
+  	cr_min = cod_cr_min1;
+  	cr_max = cod_cr_max1;
+  	draw = cod_draw1;
+  	break;
+	case 2:
+  	lum_min = cod_lum_min2;
+  	lum_max = cod_lum_max2;
+  	cb_min = cod_cb_min2;
+  	cb_max = cod_cb_max2;
+  	cr_min = cod_cr_min2;
+  	cr_max = cod_cr_max2;
+  	draw = cod_draw2;
+  	break;
+	default:
+  	return img;
   };
 
   int32_t x_c, y_c;
 
 
+
+
+// the count variable represents the row in the image corresponding to the optimal heading angle for the robot to avoid colliding with an obstacle
   uint32_t count = find_object_centroid(img);
+
 
 
 
@@ -139,12 +132,12 @@ struct image_t *object_detector2(struct image_t *img, uint8_t camera_id __attrib
 
 //define some new variables
 #ifndef OPENCVTHEO_FPS
-#define OPENCVTHEO_FPS 0       ///< Default FPS (zero means run at camera fps)
+#define OPENCVTHEO_FPS 0   	///< Default FPS (zero means run at camera fps)
 #endif
 
 
 void color_object_detector_init(void){
-  
+ 
   //initialise callback of opencv function  ///// UNCOMMENT THIS FOR USING OPITICAL FLOW DEFINED IN OPENCV_THEO.CPP /////////
   //cv_add_to_device(&OPENCVTHEO_CAMERA, opencv_func, OPENCVTHEO_FPS, 0);  
   //as before
@@ -186,186 +179,185 @@ void color_object_detector_init(void){
 
 
 
+
 uint32_t find_object_centroid(struct image_t *img) {
-	// Define minimum and maximum threshold values for black or dark gray pixels
-	uint8_t y_min_threshold_black = 10; // Adjust this threshold value as needed
-	uint8_t y_max_threshold_black = 110; // Adjust this threshold value as needed
-	uint8_t cr_min_threshold_black = 110; // Adjust this threshold value as needed
-	uint8_t cr_max_threshold_black = 135; // Adjust this threshold value as needed
-	uint8_t cb_min_threshold_black = 125; // Adjust this threshold value as needed
-	uint8_t cb_max_threshold_black = 150; // Adjust this threshold value as needed
+    // Define minimum and maximum threshold values for dark gray pixels (edges of the ground)
+    uint8_t y_min_threshold_black = 10; // Adjust this threshold value as needed
+    uint8_t y_max_threshold_black = 110; // Adjust this threshold value as needed
+    uint8_t cr_min_threshold_black = 110; // Adjust this threshold value as needed
+    uint8_t cr_max_threshold_black = 135; // Adjust this threshold value as needed
+    uint8_t cb_min_threshold_black = 125; // Adjust this threshold value as needed
+    uint8_t cb_max_threshold_black = 150; // Adjust this threshold value as needed
 
-	// Define minimum and maximum threshold values for blue pixels
-	uint8_t y_min_threshold_blue = 60; // Adjust this threshold value as needed  
-	uint8_t y_max_threshold_blue = 100; // Adjust this threshold value as needed
-	uint8_t cr_min_threshold_blue = 145; // Adjust this threshold value as needed
-	uint8_t cr_max_threshold_blue = 165; // Adjust this threshold value as needed
-	uint8_t cb_min_threshold_blue = 85; // Adjust this threshold value as needed
-	uint8_t cb_max_threshold_blue = 105; // Adjust this threshold value as needed
+    // Define minimum and maximum threshold values for blue pixels (edges of the ground)
+    uint8_t y_min_threshold_blue = 60; // Adjust this threshold value as needed  
+    uint8_t y_max_threshold_blue = 100; // Adjust this threshold value as needed
+    uint8_t cr_min_threshold_blue = 145; // Adjust this threshold value as needed
+    uint8_t cr_max_threshold_blue = 165; // Adjust this threshold value as needed
+    uint8_t cb_min_threshold_blue = 85; // Adjust this threshold value as needed
+    uint8_t cb_max_threshold_blue = 105; // Adjust this threshold value as needed
 
-  // Define minimum and maximum threshold values for green pixels (belonging to plants)
-  uint8_t y_min_threshold_green = 50;  // Adjust this threshold value as needed
-  uint8_t y_max_threshold_green = 150; // Adjust this threshold value as needed
-  uint8_t cr_min_threshold_green = 80;  // Adjust this threshold value as needed
-  uint8_t cr_max_threshold_green = 180;  // Adjust this threshold value as needed
-  uint8_t cb_min_threshold_green = 0; // Adjust this threshold value as needed
-  uint8_t cb_max_threshold_green = 125;  // Adjust this threshold value as needed
-
-
-	// Declare cropped_height before using it
-	uint8_t *buffer = img->buf;
-	uint16_t cropped_width = img->w * 0.80;
-
-	// // Define the collision area parameters (center coordinates, width, and height)
-	// int collision_center_x = img->w / 2;  // Center of the image in the x-axis
-	// int collision_center_y = img->h / 2;  // Center of the image in the y-axis
-	// int collision_width = img->w * 0.20;     	// Width of the collision area
-	// int collision_height = img->h * 0.20;   	// Height of the collision area
-
-	// Go through all the pixels and crop the right part
+    // Define minimum and maximum threshold values for green pixels (belonging to plants)
+    uint8_t y_min_threshold_green = 50;  // Adjust this threshold value as needed
+    uint8_t y_max_threshold_green = 150; // Adjust this threshold value as needed
+    uint8_t cr_min_threshold_green = 80;  // Adjust this threshold value as needed
+    uint8_t cr_max_threshold_green = 180;  // Adjust this threshold value as needed
+    uint8_t cb_min_threshold_green = 0; // Adjust this threshold value as needed
+    uint8_t cb_max_threshold_green = 125;  // Adjust this threshold value as needed
 
 
 
-
-
-	// for (uint16_t y = 0; y < img->h; y++) {
-  //   	for (uint16_t x = 0; x < img->w; x++) {
-  //       	if (x >= cropped_width) {
-  //           	uint8_t *yp = buffer + (y * 2 * img->w + 2 * x + 1);  // Y component of the pixel
-  //           	*yp = 0;  // Set Y component to 0 (black)
-  //           	// Set U and V components to mid-values (128 for neutral color)
-  //           	*(buffer + y * 2 * img->w + 2 * x) = 128;  // U component
-  //           	*(buffer + y * 2 * img->w + 2 * x + 2) = 128;  // V component
-  //       	}
-  //   	}
-	// }
+    uint8_t *buffer = img->buf;
 
 
 
+    int cnt_green = 0; // counting the number of green pixels inside a row
+    int cnt = 0; // counting the number of uninterrupted rows without obstacle
+    int cnt_max = 0; // greatest number of rows uninterrupted without obstacle
+    int close_height = img->h;
+    int close_width = img->w;
+    int new_dir = close_height / 2; // new_dir is the row corresponding to the optimal heading angle. It is initialized to be in the center of the image
+    int obs_size = 0; // counting the number of uninterrupted rows with obstacle
+    
+ 
+    // Iterate through all the rows of the image
+    for (uint16_t y = 0; y < img->h; y++) {
+   	 	int obstacle = 1;
+    
+    // Iterate through the first half of columns (bottom)
+    for (uint16_t x = 0; x < close_width/2; x++) {
+      	// Extract the YUV values of the pixel
+      	uint8_t *yp, *up, *vp;
+      	if (x % 2 == 0) {
+          	// Even x
+          	up = &buffer[y * 2 * img->w + 2 * x];  	// U
+          	yp = &buffer[y * 2 * img->w + 2 * x + 1];  // Y1
+          	vp = &buffer[y * 2 * img->w + 2 * x + 2];  // V
+          	//yp = &buffer[y * 2 * img->w + 2 * x + 3]; // Y2
+      	} else {
+          	// Uneven x
+          	up = &buffer[y * 2 * img->w + 2 * x - 2];  // U
+          	//yp = &buffer[y * 2 * img->w + 2 * x - 1]; // Y1
+          	vp = &buffer[y * 2 * img->w + 2 * x];  	// V
+          	yp = &buffer[y * 2 * img->w + 2 * x + 1];  // Y2
+      	}
+    
+    
+    
+    // If the pixel is between the thresholds of either blue or dark gray, then it means that there is not obstacle in that row of pixel
+        	if ( (y_min_threshold_black < *yp && *yp < y_max_threshold_black) && (cr_min_threshold_black < *up && *up < cr_max_threshold_black) && (cb_min_threshold_black < *vp && *vp < cb_max_threshold_black)){  
+       		 // one more row without obstacle
+            	cnt++;
+            	// no obstacle
+            	obstacle = 0;
+            	break;
 
-  int plant = 0;
-  int cnt_green = 0;
-	int cnt = 0;
-	int cnt_max = 0;
-	int close_height = img->h;
-	int close_width = img->w;
-	int new_dir = close_height / 2;
-	int obs_size = 0;
-  
-	// Iterate through all pixels in the image
-	for (uint16_t y = 0; y < img->h; y++) {
-    int obstacle = 1;
-      for (uint16_t x = 0; x < close_width/2; x++) {
-          // Check if the color is inside the specified values
-          uint8_t *yp, *up, *vp;
-          if (x % 2 == 0) {
-              // Even x
-              up = &buffer[y * 2 * img->w + 2 * x];      // U
-              yp = &buffer[y * 2 * img->w + 2 * x + 1];  // Y1
-              vp = &buffer[y * 2 * img->w + 2 * x + 2];  // V
-              //yp = &buffer[y * 2 * img->w + 2 * x + 3]; // Y2
-          } else {
-              // Uneven x
-              up = &buffer[y * 2 * img->w + 2 * x - 2];  // U
-              //yp = &buffer[y * 2 * img->w + 2 * x - 1]; // Y1
-              vp = &buffer[y * 2 * img->w + 2 * x];      // V
-              yp = &buffer[y * 2 * img->w + 2 * x + 1];  // Y2
-          }
+        	} else if ((y_min_threshold_blue < *yp && *yp < y_max_threshold_blue) && (cr_min_threshold_blue < *up && *up < cr_max_threshold_blue) && (cb_min_threshold_blue < *vp && *vp < cb_max_threshold_blue)) {
+       		 // one more row without obstacle
+            	cnt++;
+            	// no obstacle
+            	obstacle = 0;
+            	break;
+        	}   
+  	}
+ 	 
+ 	 
+  	 
+  	// Iterate through the second half of columns (top)
+  	for (uint16_t x = close_width/2; x < close_width; x++) {
+    	uint8_t *yp, *up, *vp;
 
-            if ( (y_min_threshold_black < *yp && *yp < y_max_threshold_black) && (cr_min_threshold_black < *up && *up < cr_max_threshold_black) && (cb_min_threshold_black < *vp && *vp < cb_max_threshold_black)){  //(20 < *yp && *yp < 80) && (80 < *up && *up < 150) && (80 < *vp && *vp < 150)
-                cnt++;
-                obstacle = 0;
-                break;
+      // Extract the YUV values of the pixel
+      	if (x % 2 == 0) {
+          	// Even x
+          	up = &buffer[y * 2 * img->w + 2 * x];  	// U
+          	yp = &buffer[y * 2 * img->w + 2 * x + 1];  // Y1
+          	vp = &buffer[y * 2 * img->w + 2 * x + 2];  // V
+          	//yp = &buffer[y * 2 * img->w + 2 * x + 3]; // Y2
+      	} else {
+          	// Uneven x
+          	up = &buffer[y * 2 * img->w + 2 * x - 2];  // U
+          	//yp = &buffer[y * 2 * img->w + 2 * x - 1]; // Y1
+          	vp = &buffer[y * 2 * img->w + 2 * x];  	// V
+          	yp = &buffer[y * 2 * img->w + 2 * x + 1];  // Y2
+      	}
 
-            } else if ((y_min_threshold_blue < *yp && *yp < y_max_threshold_blue) && (cr_min_threshold_blue < *up && *up < cr_max_threshold_blue) && (cb_min_threshold_blue < *vp && *vp < cb_max_threshold_blue)) { //(60 < *yp && *yp < 100) && (140 < *up && *up < 173) && (80 < *vp && *vp < 110)
-                cnt++;
-                obstacle = 0;
-                break;
-            }
-          
-      }
-      for (uint16_t x = close_width/2; x < close_width; x++) {
-        uint8_t *yp, *up, *vp;
-          if (x % 2 == 0) {
-              // Even x
-              up = &buffer[y * 2 * img->w + 2 * x];      // U
-              yp = &buffer[y * 2 * img->w + 2 * x + 1];  // Y1
-              vp = &buffer[y * 2 * img->w + 2 * x + 2];  // V
-              //yp = &buffer[y * 2 * img->w + 2 * x + 3]; // Y2
-          } else {
-              // Uneven x
-              up = &buffer[y * 2 * img->w + 2 * x - 2];  // U
-              //yp = &buffer[y * 2 * img->w + 2 * x - 1]; // Y1
-              vp = &buffer[y * 2 * img->w + 2 * x];      // V
-              yp = &buffer[y * 2 * img->w + 2 * x + 1];  // Y2
-          }
-          if ((y_min_threshold_green < *yp && *yp < y_max_threshold_green) && (cr_min_threshold_green < *up && *up < cr_max_threshold_green) && (cb_min_threshold_green < *vp && *vp < cb_max_threshold_green)){  // (20 < *yp && *yp < 80) && (80 < *up && *up < 150) && (80 < *vp && *vp < 150)
-                cnt_green++;
-            }
-    	    
-      }
 
-    	if (obstacle || cnt_green >= 30) {
-        	if (cnt > cnt_max) {
-            	cnt_max = cnt;
-              if (y % 2 == 0) { 
-            	  new_dir = y - cnt / 2;}
-              else{new_dir = y - (cnt-1) / 2;}
+      // If the pixel is between the thresholds, then it means that it might belong to a plant
+      	if ((y_min_threshold_green < *yp && *yp < y_max_threshold_green) && (cr_min_threshold_green < *up && *up < cr_max_threshold_green) && (cb_min_threshold_green < *vp && *vp < cb_max_threshold_green)){  
+     		 // one more pixel potentially belonging to a plant
+            	cnt_green++;
         	}
-        	obs_size++;
-          if (cnt_green >= 29){ 
-                cnt = 0;
-                obs_size = obs_size - 1;
-          }
+   		 
+  	}
 
 
-    	} else {
-        	if (obs_size > 35) {
-            	// If the obstacle has a width greater than 35 pixels, neglect it (far away)
-            	cnt = 1;
-        	} else if (1 <= obs_size && obs_size <= 35) {
-            	// If the obstacle has a width between 1 and 35 pixels, color the row in red
-            	cnt += obs_size;
-        	}
-        	obs_size = 0;
-    	}
-      cnt_green = 0;
-	}
 
-  // printf("Value of new_dir: %d\n", new_dir); // You may uncomment this line if needed
+    // Checking if an obstacle is detected in that row (either "regular" obstacle or a plant)
+   	 if (obstacle || cnt_green >= 30) {
+   		 // The previous obstacle-free zone is compared to the greatest stored
+   		 if (cnt > cnt_max) {
+       		 cnt_max = cnt;
+       		 
+          	// Update the new optimal heading angle row if necessary
+          	if (y % 2 == 0) {
+       		   new_dir = y - cnt / 2;}
+          	else{new_dir = y - (cnt-1) / 2;}
+   		 }
+   		 obs_size++;
+     	 
+        // Necessary to dissociate plants from "regular" obstacles
+      	if (cnt_green >= 30){
+            	cnt = 0;
+            	obs_size = obs_size - 1;
+      	}
 
+    
+    // In the case where no obstacle is detected in the current row
+   	 } else {
+   		 // If the previous row belonged to an obstacle
+   		 if (obs_size > 35) {
+       		 // Only consider that last obstacle if it has a width greater than 35 pixels
+       		 cnt = 1;
+   		 } else if (1 <= obs_size && obs_size <= 35) {
+       		 // Otherwise, don't consider it (probably far away)
+       		 cnt += obs_size;
+   		 }
+   		 obs_size = 0;
+   	 }
+  	// When switching to next row reinitialize the green counter to zero
+  	cnt_green = 0;
+    }
+
+ 
   return new_dir;
+
 }
 
 
 
 
-
-
-
-
-
-
-//periodic function that will send the information to the orange_avoider
+//periodic function that will send the optimal heading angle row to orange_avoider.c
 
 void color_object_detector_periodic(void)
 {
-  
+ 
   static struct color_object_t local_filters[2];
   pthread_mutex_lock(&mutex);
   memcpy(local_filters, global_filters, 2*sizeof(struct color_object_t));
   pthread_mutex_unlock(&mutex);
 
   if(local_filters[0].updated){
-    AbiSendMsgVISUAL_DETECTION(COLOR_OBJECT_DETECTION1_ID, local_filters[0].x_c, local_filters[0].y_c,
-        0, 0, local_filters[0].color_count, 0);  //we only need the information about if all pixels inside the Collision Area are black (no obstacle)
-    local_filters[0].updated = false;
+	AbiSendMsgVISUAL_DETECTION(COLOR_OBJECT_DETECTION1_ID, local_filters[0].x_c, local_filters[0].y_c,
+    	0, 0, local_filters[0].color_count, 0);  //we only need the information about if all pixels inside the Collision Area are black (no obstacle)
+	local_filters[0].updated = false;
   }
   if(local_filters[1].updated){
-    AbiSendMsgVISUAL_DETECTION(COLOR_OBJECT_DETECTION2_ID, local_filters[1].x_c, local_filters[1].y_c,
-        0, 0, local_filters[1].color_count, 1);
-    local_filters[1].updated = false;
+	AbiSendMsgVISUAL_DETECTION(COLOR_OBJECT_DETECTION2_ID, local_filters[1].x_c, local_filters[1].y_c,
+    	0, 0, local_filters[1].color_count, 1);
+	local_filters[1].updated = false;
   }
 }
+
 
 
